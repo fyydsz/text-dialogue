@@ -29,12 +29,12 @@ function MusicNotifier({ isPlaying, trackName }: MusicNotifierProps) {
       // 3. Atur timer untuk memulai animasi keluar setelah 4 detik
       const exitTimer = setTimeout(() => {
         setIsVisible(false);
-      }, 6050); // 7550ms (tampil) + 50ms (jeda masuk)
+      }, 9050); // 7550ms (tampil) + 50ms (jeda masuk)
 
       // 4. Hapus komponen dari DOM setelah animasi keluar selesai
       const unmountTimer = setTimeout(() => {
         setIsMounted(false);
-      }, 6550); // 7050ms + 500ms (durasi transisi keluar)
+      }, 9550); // 7050ms + 500ms (durasi transisi keluar)
 
       // Cleanup untuk membersihkan semua timer jika komponen unmount tiba-tiba
       return () => {
@@ -59,12 +59,13 @@ function MusicNotifier({ isPlaying, trackName }: MusicNotifierProps) {
         "text-white text-sm font-semibold",
         "py-3 px-8 rounded-lg shadow-lg",
         "transition-all duration-500 ease-out",
+        "scale-125",
         // Kelas animasi sekarang dikontrol oleh `isVisible`
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
       )}
     >
       <span>🎵</span>
-      <span>Now Playing:<br/><strong>{trackName}</strong></span>
+      <span>Now Playing:<br /><strong>{trackName}</strong></span>
     </div>
   );
 }
