@@ -26,6 +26,8 @@ interface TypewriterProps {
   defaultColor?: string;
   /** Map untuk formatter warna, e.g., \C1, \C2 */
   colorMap?: { [key: string]: string },
+  /** OnComplete callback */
+  onComplete?: () => void,
 }
 
 const Typewriter: React.FC<TypewriterProps> = ({
@@ -37,7 +39,8 @@ const Typewriter: React.FC<TypewriterProps> = ({
   defaultColor = '#FFFFFF',
   fontFamily = 'DeterminationMonoRegular',
   // Default map: P=putih, K=kuning, M=merah
-  colorMap = DEFAULT_COLOR_MAP
+  colorMap = DEFAULT_COLOR_MAP,
+  onComplete,
 }) => {
   // State untuk menyimpan segmen teks yang sudah diproses
   const [segments, setSegments] = useState<TextSegment[]>([]);
@@ -45,8 +48,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
   // Objek audio menggunakan useMemo agar tidak dibuat ulang terus-menerus
   const textSound = useMemo(() => {
     if (soundSrc) {
-      const audio = new Audio(soundSrc);
-      audio.volume = 0.7;
+      const audio = new Audio(soundSrc)
       return audio;
     }
     return null;
@@ -61,7 +63,10 @@ const Typewriter: React.FC<TypewriterProps> = ({
     let timerId: number;
 
     function type() {
-      if (index >= text.length) return;
+      if (index >= text.length) {
+        onComplete?.();
+        return;
+      }
 
       const char = text[index];
       const nextChar = text[index + 1];
@@ -96,6 +101,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
 
         if (textSound && char !== ' ') {
           const sound = textSound.cloneNode(true) as HTMLAudioElement;
+          sound.volume = 0.8;
           sound.play().catch(e => console.error("Audio play failed:", e));
         }
 
@@ -103,7 +109,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
         setSegments((prevSegments) => {
           const lastSegment = prevSegments[prevSegments.length - 1];
 
-          if (lastSegment && lastSegment.color === currentColor) {
+          if (lastSegment && lastSegment.color === currentColor && !lastSegment.isNewLine) {
 
             const updatedLastSegment = {
               ...lastSegment,
@@ -130,7 +136,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
       window.clearTimeout(timerId);
     };
 
-  }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound]);
+  }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound, onComplete ]);
 
   // Render: Map array segmen menjadi beberapa <span>
   return (
