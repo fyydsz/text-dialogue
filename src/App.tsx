@@ -51,9 +51,9 @@ import { cn } from './lib/utils';
 function App() {
   const isMobile = useIsMobile();
   const [showConfess, setShowConfess] = useState(false);
- 
+
   const audioRef = useRef<HTMLAudioElement>(null);
-  
+
   useEffect(() => {
     if (showConfess) {
       audioRef.current?.play().catch(error => {
@@ -61,6 +61,12 @@ function App() {
       });
     }
   }, [showConfess]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.8; // Atur ke 70%
+    }
+  }, []);
 
   const handleIntroComplete = () => {
     setShowConfess(true);
@@ -85,8 +91,9 @@ function App() {
           <Intro onComplete={handleIntroComplete} />
         )}
       </main>
-      {/* <audio ref={audioRef} src="/music/undertale.mp3" loop /> */}
-      <MusicNotifier isPlaying={showConfess} trackName="Toby Fox - It's TV Time!" />
+
+      <audio ref={audioRef} src="/music/ruderbuster.mp3" loop />
+      <MusicNotifier isPlaying={showConfess} trackName="Toby Fox - Ruder Buster" />
     </div>
   );
 }
