@@ -92,8 +92,8 @@ function App() {
         )}
       </main>
 
-      <audio ref={audioRef} src="/music/ruderbuster.mp3" loop />
-      <MusicNotifier isPlaying={showConfess} trackName="Toby Fox - Ruder Buster" />
+      <audio ref={audioRef} src="/music/fieldofhopesanddreams.mp3" loop />
+      <MusicNotifier isPlaying={showConfess} trackName="Toby Fox - Field of Hopes and Dreams" />
     </div>
   );
 }
