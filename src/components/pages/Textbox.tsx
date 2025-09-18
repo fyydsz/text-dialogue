@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Typewriter from "../hooks/typing-effect";
+import { SPEAKER_PROFILES, DEFAULT_SPEAKER } from "../dialogue/speaker.config";
 
 const DIALOGUES = [
-  "Halo,^3 ini teks pertamamu!^5\n Kamu bisa menekan tombol \\CK\"z\"^1 \\CPuntuk \\CMmelanjutkan!",
-  "Kamu berhasil menekan tombol \\CK\"z\"\\CP.^5 \\CPIni adalah teks kedua.^3 \\CKSelamat!",
-  "Dan ini adalah teks terakhir.^5\n \\CK...Mungkin?",
-  "Tunggu bentar...^3 aku \\CMmikir \\CPdulu...^7 Gajadi.",
-  "Hehehehehe."
+  { speaker: "ralsei", avatar: "ralseiserious", text: "* Halo,^3 ini teks pertamamu!^5 Kamu bisa menekan tombol \\CK\"z\"^1 \\CPuntuk melanjutkan!" },
+  { speaker: "ralsei", avatar: "ralseismile2", text: "* Kamu berhasil menekan tombol \\CK\"z\"\\CP.^5 \\CPIni adalah teks kedua.^3 \\CKSelamat!" },
+  { speaker: "ralsei", avatar: "ralseishy", text: "* Dan ini adalah teks terakhir.^5 \\CK...Mungkin?" },
+  { speaker: "ralsei", avatar: "ralseiserious", text: "* Tunggu bentar..^3 aku \\CMmikir \\CPdulu...^7 Gajadi." },
+  { speaker: "ralsei", avatar: "ralseijoy", text: "* Hehehehehe." }
 ];
 
+
+interface SpeakerProfile {
+  name: string;
+  soundSrc: string;
+  avatars?: { [key: string]: string };
+}
 
 function Textbox() {
   const [isVisible, setIsVisible] = useState(false);
@@ -18,21 +25,33 @@ function Textbox() {
 
   // (BARU) State untuk teks yang akan ditampilkan
   const [currentText, setCurrentText] = useState("");
+  const [currentSpeaker, setCurrentSpeaker] = useState<SpeakerProfile>(DEFAULT_SPEAKER);
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
 
   // (DIUBAH) Efek ini sekarang mengontrol seluruh sequence
   useEffect(() => {
+    const currentDialogue = DIALOGUES[dialogueIndex];
+    if (!currentDialogue) return;
     setIsVisible(true);
     setCurrentText("");
     setIsTyping(true);
 
-    if (dialogueIndex === 0) {
-      const timer = setTimeout(() => {
-        setCurrentText(DIALOGUES[dialogueIndex]);
-      }, 1000);
-      return () => clearTimeout(timer);
+    const profile = SPEAKER_PROFILES[currentDialogue.speaker] || DEFAULT_SPEAKER;
+    setCurrentSpeaker(profile);
 
+    const avatarPath = profile.avatars?.[currentDialogue.avatar] || profile.avatars?.default;
+    setAvatarSrc(avatarPath || null);
+
+    const startTyping = () => {
+      setCurrentText(currentDialogue.text);
+    };
+
+    // Delay hanya untuk dialog pertama
+    if (dialogueIndex === 0) {
+      const timer = setTimeout(startTyping, 1000);
+      return () => clearTimeout(timer);
     } else {
-      setCurrentText(DIALOGUES[dialogueIndex]);
+      startTyping();
     }
 
   }, [dialogueIndex]);
@@ -73,15 +92,40 @@ function Textbox() {
         )}
       >
         {dialogueIndex < DIALOGUES.length && (
-          <div className="bg-black border-4 border-white pt-4 pl-6 pr-6 pb-4 w-[576px] h-48 text-white text-3xl">
-            <Typewriter
-              // (DIUBAH) Gunakan currentText state
-              text={currentText}
-              speed={60}
-              basePauseMs={1000 / 30}
-              soundSrc="/music/snd_txtsus.wav"
-              onComplete={handleTypingComplete}
-            />
+          <div className="relative w-[750px] h-48">
+
+            {/* (DIUBAH) Container utama sekarang menggunakan Flexbox */}
+            <div className="bg-black border-4 border-white w-full h-full flex items-center text-[35px]">
+
+              {/* Kolom 1: Avatar */}
+              <div className="px-3 flex-shrink-0">
+                {avatarSrc && (
+                  <img
+                    src={avatarSrc}
+                    alt={`${currentSpeaker.name} avatar`}
+                    // Ukuran avatar tetap sama, tapi tidak lagi absolute
+                    className="w-35 object-contain mr-3 ml-3"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                )}
+              </div>
+
+              {/* Kolom 2: Teks (Typewriter) */}
+              {/* flex-grow membuat div ini mengisi sisa ruang yang tersedia */}
+              <div className={cn(
+                "flex-grow h-full pt-4 pr-4 pb-4 whitespace-pre-wrap break-words leading-tight",
+                // (DIUBAH) Tambahkan logika kondisional ini
+                currentText.startsWith('* ') && "hanging-indent"
+              )}>
+                <Typewriter
+                  text={currentText}
+                  speed={50}
+                  basePauseMs={1000 / 30}
+                  soundSrc={currentSpeaker.soundSrc}
+                  onComplete={handleTypingComplete}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
