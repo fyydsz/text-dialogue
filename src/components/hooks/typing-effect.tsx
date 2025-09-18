@@ -101,7 +101,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
 
         if (textSound && char !== ' ') {
           const sound = textSound.cloneNode(true) as HTMLAudioElement;
-          sound.volume = 0.8;
+          sound.volume = 1;
           sound.play().catch(e => console.error("Audio play failed:", e));
         }
 
