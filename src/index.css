@@ -14,7 +14,13 @@
 
   scrollbar-width: none;
   -ms-overflow-style: none;
+
   ::-webkit-scrollbar {
     display: none;
   }
+}
+
+.hanging-indent {
+  padding-left: 1.85ch;
+  text-indent: -1.85ch;
 }
