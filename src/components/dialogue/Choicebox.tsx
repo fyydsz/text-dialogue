@@ -21,14 +21,13 @@ const ChoiceBox: React.FC<ChoiceBoxProps> = ({ options, selectedIndex }) => {
             {selectedIndex === index ? (
               <img
                 src="/img/soul/spr_heart_0.png"
-                className="w-5 h-5" // Sesuaikan ukurannya jika perlu
+                className="w-5 h-5"
                 style={{ imageRendering: 'crisp-edges' }}
               />
             ) : (
-              // Sisakan ruang kosong agar teks tidak bergeser saat hati berpindah
               <div className="w-5 h-5" />
             )}
-            
+
             <span className={selectedIndex !== index ? 'opacity-60' : 'opacity-100'}>
               {option.text}
             </span>
