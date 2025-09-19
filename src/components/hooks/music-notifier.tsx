@@ -18,6 +18,7 @@ function MusicNotifier({ isPlaying, trackName }: MusicNotifierProps) {
     if (isPlaying) {
       // Pasang komponen ke DOM
       setIsMounted(true);
+      
       // Timer untuk memulai animasi masuk
       const enterTimer = setTimeout(() => {
         setIsVisible(true);
