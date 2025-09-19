@@ -1,6 +1,6 @@
-# Sebuah project dari pikiranku
+# Sebuah project iseng
 
-Sebuah aplikasi web yang menyediakan sistem dialog interaktif yang terinspirasi dari game Undertale dan Deltarune. Project ini menggunakan React dengan TypeScript dan menampilkan character dengan sistem percakapan yang dinamis.
+Sebuah web yang menyediakan sistem dialog interaktif, terinspirasi dari game Undertale dan Deltarune. Project ini menggunakan React dengan TypeScript dan menampilkan character dengan sistem percakapan yang dinamis.
 
 ## ✨ Fitur
 
