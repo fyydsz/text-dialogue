@@ -15,26 +15,23 @@ function MusicNotifier({ isPlaying, trackName }: MusicNotifierProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Kita hanya ingin memicu ini saat musik BARU mulai diputar
     if (isPlaying) {
-      // 1. Pasang komponen ke DOM (tapi masih tak terlihat)
+      // Pasang komponen ke DOM
       setIsMounted(true);
-
-      // 2. Beri jeda sangat singkat, lalu buat komponen terlihat.
-      //    Ini adalah trik untuk memicu animasi masuk.
+      // Timer untuk memulai animasi masuk
       const enterTimer = setTimeout(() => {
         setIsVisible(true);
       }, 50); // Jeda 50ms
 
-      // 3. Atur timer untuk memulai animasi keluar setelah 4 detik
+      // Timer untuk memulai animasi keluar setelah 9 detik
       const exitTimer = setTimeout(() => {
         setIsVisible(false);
-      }, 9050); // 7550ms (tampil) + 50ms (jeda masuk)
+      }, 9050);
 
-      // 4. Hapus komponen dari DOM setelah animasi keluar selesai
+      // Timer untuk melepas komponen dari DOM setelah animasi keluar selesai
       const unmountTimer = setTimeout(() => {
         setIsMounted(false);
-      }, 9550); // 7050ms + 500ms (durasi transisi keluar)
+      }, 9550); 
 
       // Cleanup untuk membersihkan semua timer jika komponen unmount tiba-tiba
       return () => {
@@ -43,7 +40,7 @@ function MusicNotifier({ isPlaying, trackName }: MusicNotifierProps) {
         clearTimeout(unmountTimer);
       };
     }
-  }, [isPlaying]); // Efek ini HANYA bergantung pada isPlaying
+  }, [isPlaying]); 
 
   // Jika tidak terpasang, jangan render apa-apa
   if (!isMounted) {
