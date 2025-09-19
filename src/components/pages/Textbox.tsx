@@ -4,12 +4,14 @@ import Typewriter from "../hooks/typing-effect";
 import { SPEAKER_PROFILES, DEFAULT_SPEAKER } from "../dialogue/speaker.config";
 import ChoiceBox from "../dialogue/Choicebox";
 
+/** Interface untuk profil speaker */
 interface SpeakerProfile {
   name: string;
   soundSrc: string;
   avatars?: { [key: string]: string };
 }
 
+/** Tipe untuk node dialog */
 type DialogueNodeObject = {
   speaker: string;
   avatar: string;
@@ -18,7 +20,7 @@ type DialogueNodeObject = {
 } | {
   type: 'choice';
   options: { text: string; goto: string; }[];
-  speaker?: undefined; // Tambahkan ini agar TypeScript tidak bingung
+  speaker?: undefined;
   avatar?: undefined;
   text?: undefined;
 } | {
@@ -28,16 +30,18 @@ type DialogueNodeObject = {
   text?: undefined;
 };
 
-// (BARU) Definisikan bentuk dari keseluruhan pohon dialog
+/** Tipe untuk pohon dialog */
 type DialogueTree = {
-  [key: string]: DialogueNodeObject[]; // Ini adalah kuncinya: [key: string]
+  [key: string]: DialogueNodeObject[];
 };
 
+/** Interface untuk opsi pilihan */
 interface ChoiceOption {
   text: string;
   goto: string;
 }
 
+/** Pohon dialog */
 const DIALOGUES_TREE: DialogueTree = {
   "start":
     [
@@ -99,27 +103,25 @@ const DIALOGUES_TREE: DialogueTree = {
     ]
 }
 
-// Ganti seluruh isi fungsi Textbox-mu dengan ini
+/**
+ * Textbox component untuk menampilkan dialog dan pilihan.
+ * @returns JSX.Element
+ */
 function Textbox() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isTyping, setIsTyping] = useState(true);
-  const [currentText, setCurrentText] = useState("");
-  const [speakerProfile, setSpeakerProfile] = useState<SpeakerProfile>(DEFAULT_SPEAKER);
-  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false); // Kontrol visibilitas kotak teks
+  const [isTyping, setIsTyping] = useState(true); // Kontrol status mengetik
+  const [currentText, setCurrentText] = useState(""); // Teks saat ini yang ditampilkan
+  const [speakerProfile, setSpeakerProfile] = useState<SpeakerProfile>(DEFAULT_SPEAKER); // Profil pembicara saat ini
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null); // Sumber avatar saat ini
+  const [currentBranch, setCurrentBranch] = useState('start'); // Cabang dialog saat ini
+  const [currentIndex, setCurrentIndex] = useState(0); // Indeks dialog saat ini dalam cabang
+  const [isChoosing, setIsChoosing] = useState(false); // Apakah sedang dalam mode memilih
+  const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]); // Opsi pilihan saat ini
+  const [selectedChoiceIndex, setSelectedChoiceIndex] = useState(0); // Indeks pilihan yang dipilih
+  const [inputLocked, setInputLocked] = useState(false); // Kontrol penguncian input
+  const zKeyIsDown = useRef(false); // Ref untuk melacak status tombol 'z'
 
-  // (DIUBAH) State untuk mengelola pohon dialog, bukan lagi index linear
-  const [currentBranch, setCurrentBranch] = useState('start');
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  // (BARU) State untuk mode pilihan
-  const [isChoosing, setIsChoosing] = useState(false);
-  const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]);
-  const [selectedChoiceIndex, setSelectedChoiceIndex] = useState(0);
-
-  const [inputLocked, setInputLocked] = useState(false);
-  const zKeyIsDown = useRef(false);
-
-  // (DIUBAH) Efek utama yang membaca dari DIALOGUES_TREE
+  /** Effect untuk mengatur dialog */
   useEffect(() => {
     const dialogueNode = DIALOGUES_TREE[currentBranch]?.[currentIndex];
 
@@ -131,89 +133,80 @@ function Textbox() {
     setIsVisible(true);
     setIsChoosing(false);
 
-    if (dialogueNode.type === 'choice') {
+    if (dialogueNode.type === 'choice') { // Mode pilihan
       setCurrentText("");
       setIsTyping(false);
       setChoiceOptions(dialogueNode.options);
       setSelectedChoiceIndex(0);
       setIsChoosing(true);
-    } else if (dialogueNode.type === 'end') {
+    } else if (dialogueNode.type === 'end') { // Mode akhir dialog
       setIsVisible(false);
-    } else {
-      // --- PERUBAHAN UTAMA ADA DI BLOK INI ---
-
-      // 1. Lakukan semua setup visual secara INSTAN
+    } else { // Mode dialog biasa
       setIsTyping(true);
-      setCurrentText(""); // Pastikan area teks kosong dulu
+      setCurrentText(""); 
       setInputLocked(true)
 
-      // Segera tampilkan speaker dan avatar
+      // 1. Perbarui profil speaker dan avatar
       const profile = SPEAKER_PROFILES[dialogueNode.speaker] || DEFAULT_SPEAKER;
       setSpeakerProfile(profile);
       const avatarPath = profile.avatars?.[dialogueNode.avatar] || profile.avatars?.default;
       setAvatarSrc(avatarPath || null);
 
-      // 2. Buat fungsi khusus untuk memulai ketikan
+      // 2. Fungsi khusus untuk mulai mengetik
       const startTypingAction = () => {
         setCurrentText(dialogueNode.text);
       };
 
-      // 3. Terapkan delay HANYA pada aksi mengetik, dan hanya untuk dialog pertama
+      // 3. Terapkan delay HANYA pada aksi mengetik pada dialog pertama
       if (currentBranch === 'start' && currentIndex === 0) {
-        // Jika ini adalah dialog pertama, tunggu 1 detik sebelum mengetik
         const timer = setTimeout(startTypingAction, 1000);
         return () => clearTimeout(timer);
       } else {
-        // Untuk semua dialog lainnya, langsung mulai mengetik
         startTypingAction();
       }
     }
   }, [currentBranch, currentIndex]);
 
+  /** Callback saat mengetik selesai */
   const handleTypingComplete = useCallback(() => {
     setIsTyping(false);
-    // Jika tombol 'z' SEDANG DITAHAN saat ketikan selesai, KUNCI inputnya.
-    // Jika tidak, biarkan input tetap terbuka.
     if (zKeyIsDown.current) {
       setInputLocked(true);
     }
   }, []);
-  // (DIUBAH) handleKeyDown sekarang punya dua mode: dialog dan memilih
+
+  /** Event handler untuk penekanan tombol */
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (isChoosing) {
-      // Logika saat dalam mode memilih
-      if (event.key === 'ArrowRight') {
+      if (event.key === 'ArrowRight') { // Navigasi pilihan 
         setSelectedChoiceIndex(prev => (prev + 1) % choiceOptions.length);
-      } else if (event.key === 'ArrowLeft') {
+      } else if (event.key === 'ArrowLeft') { // Navigasi pilihan
         setSelectedChoiceIndex(prev => (prev - 1 + choiceOptions.length) % choiceOptions.length);
-      } else if (event.key.toLowerCase() === 'z') {
+      } else if (event.key.toLowerCase() === 'z') { // Konfirmasi pilihan
         const selectedOption = choiceOptions[selectedChoiceIndex];
         if (selectedOption) {
-          // Lompat ke cabang baru sesuai pilihan
           setCurrentBranch(selectedOption.goto);
           setCurrentIndex(0); // Mulai dari awal cabang baru
         }
       }
-    } else {
-      // Logika saat dalam mode dialog biasa
+    } else { // Logika saat dalam mode dialog biasa
       if (event.key.toLowerCase() === 'z') {
         zKeyIsDown.current = true
         if (isTyping || inputLocked) return; // Abaikan jika sedang mengetik
-        // Lanjut ke dialog berikutnya di cabang yang sama
         setCurrentIndex(prev => prev + 1);
       }
     }
   }, [isTyping, isChoosing, choiceOptions, selectedChoiceIndex, inputLocked]);
 
+  /** Event handler untuk pelepasan tombol */
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     if (event.key.toLowerCase() === 'z') {
       zKeyIsDown.current = false;
-
       setInputLocked(false);
-
     }
   }, []);
 
+  /** Pasang event listener untuk keydown dan keyup */
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -223,7 +216,7 @@ function Textbox() {
     };
   }, [handleKeyDown, handleKeyUp]);
 
-  // Ambil dialog saat ini untuk dirender
+  // Dialog saat ini
   const currentDialogue = DIALOGUES_TREE[currentBranch]?.[currentIndex];
 
   return (
@@ -231,7 +224,6 @@ function Textbox() {
       <div className={cn("transition-all duration-2000 ease-out", isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95")}>
         {currentDialogue && (
           <div className="relative w-[750px] h-48">
-            {/* ... (JSX untuk nama speaker bisa ditambahkan kembali di sini jika mau) */}
             <div className="bg-black border-4 border-white w-full h-full flex items-center text-[35px]">
 
               {/* Kolom 1: Avatar (HANYA MUNCUL JIKA TIDAK SEDANG MEMILIH) */}
@@ -251,7 +243,6 @@ function Textbox() {
               {/* Kolom 2: Teks ATAU Pilihan */}
               <div className={cn(
                 "h-full",
-                // Jika tidak memilih, beri padding. Jika memilih, ambil lebar penuh untuk menengahkan.
                 !isChoosing ? "flex-grow pt-4 pr-4 pb-4" : "w-full",
                 "whitespace-pre-wrap break-words leading-tight",
                 currentText.startsWith('* ') && "hanging-indent"
