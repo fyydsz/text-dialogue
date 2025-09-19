@@ -113,8 +113,8 @@ function Textbox() {
   const [currentText, setCurrentText] = useState(""); // Teks saat ini yang ditampilkan
   const [speakerProfile, setSpeakerProfile] = useState<SpeakerProfile>(DEFAULT_SPEAKER); // Profil pembicara saat ini
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null); // Sumber avatar saat ini
-  const [currentBranch, setCurrentBranch] = useState('start'); // Cabang dialog saat ini
-  const [currentIndex, setCurrentIndex] = useState(0); // Indeks dialog saat ini dalam cabang
+  const [currentBranch, setCurrentBranch] = useState('start'); // Node dialog saat ini
+  const [currentIndex, setCurrentIndex] = useState(0); // Indeks dialog saat ini dalam node
   const [isChoosing, setIsChoosing] = useState(false); // Apakah sedang dalam mode memilih
   const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]); // Opsi pilihan saat ini
   const [selectedChoiceIndex, setSelectedChoiceIndex] = useState(0); // Indeks pilihan yang dipilih
@@ -186,7 +186,7 @@ function Textbox() {
         const selectedOption = choiceOptions[selectedChoiceIndex];
         if (selectedOption) {
           setCurrentBranch(selectedOption.goto);
-          setCurrentIndex(0); // Mulai dari awal cabang baru
+          setCurrentIndex(0); // Mulai dari awal node baru
         }
       }
     } else { // Logika saat dalam mode dialog biasa
