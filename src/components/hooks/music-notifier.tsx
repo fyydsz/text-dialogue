@@ -57,7 +57,7 @@ function MusicNotifier({ isPlaying, trackName }: MusicNotifierProps) {
         "flex items-center space-x-3",
         "bg-black/70 backdrop-blur-sm",
         "text-white text-sm font-semibold",
-        "py-3 px-8 rounded-lg shadow-lg",
+        "py-6 px-15 rounded-lg shadow-lg",
         "transition-all duration-500 ease-out",
         "scale-125",
         // Kelas animasi sekarang dikontrol oleh `isVisible`
