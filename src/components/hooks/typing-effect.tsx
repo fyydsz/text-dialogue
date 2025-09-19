@@ -64,7 +64,10 @@ const Typewriter: React.FC<TypewriterProps> = ({
 
     function type() {
       if (index >= text.length) {
-        onComplete?.();
+        // (DIUBAH) Hanya panggil onComplete jika ada teks yang diketik.
+        if (text.length > 0) {
+          onComplete?.();
+        }
         return;
       }
 
@@ -136,7 +139,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
       window.clearTimeout(timerId);
     };
 
-  }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound, onComplete ]);
+  }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound, onComplete]);
 
   // Render: Map array segmen menjadi beberapa <span>
   return (
