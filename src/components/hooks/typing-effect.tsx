@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
-// Delay teks
+/** Map untuk warna teks */
 const DEFAULT_COLOR_MAP = { 'P': '#FFFFFF', 'K': '#FFCC00', 'M': '#FF0000' };
+/** Map untuk jeda teks */
 const DEFAULT_DELAY_MAP = {
-  '1': 5, '2': 10, '3': 15, '4': 20, '5': 30, '6': 40, '7': 60, '8': 90, '9': 150,
+  '1': 5,
+  '2': 10,
+  '3': 15,
+  '4': 20,
+  '5': 30,
+  '6': 40,
+  '7': 60,
+  '8': 90,
+  '9': 150,
 };
 
-// Interface untuk segmen teks dengan warna
+/** Interface untuk segmen teks dengan warna & baris baru */
 interface TextSegment {
   text: string;
   color: string;
@@ -16,7 +25,9 @@ interface TextSegment {
 // Interface props untuk komponen Typewriter
 interface TypewriterProps {
   text: string;
+  /** Kecepatan ketik (dalam ms per karakter) */
   speed?: number;
+  /** Jeda dasar antara karakter (dalam ms) */
   basePauseMs?: number;
   /** Path ke file suara */
   soundSrc?: string;
@@ -35,17 +46,18 @@ const Typewriter: React.FC<TypewriterProps> = ({
   speed = 50,
   basePauseMs = 10,
   soundSrc,
-  // Default ke putih
+  /** Warna teks default */
   defaultColor = '#FFFFFF',
+  /** Font family untuk teks */
   fontFamily = 'DeterminationMonoRegular',
-  // Default map: P=putih, K=kuning, M=merah
+  /** Map untuk jeda teks */
   colorMap = DEFAULT_COLOR_MAP,
   onComplete,
 }) => {
-  // State untuk menyimpan segmen teks yang sudah diproses
+  /** State untuk menyimpan segmen teks yang sudah diproses */
   const [segments, setSegments] = useState<TextSegment[]>([]);
 
-  // Objek audio menggunakan useMemo agar tidak dibuat ulang terus-menerus
+  /** Objek audio untuk efek suara */
   const textSound = useMemo(() => {
     if (soundSrc) {
       const audio = new Audio(soundSrc)
@@ -54,17 +66,17 @@ const Typewriter: React.FC<TypewriterProps> = ({
     return null;
   }, [soundSrc]);
 
+  /** Efek untuk memproses teks */
   useEffect(() => {
-    // Reset segmen setiap teks berubah
     setSegments([]);
 
     let index = 0;
     let currentColor = defaultColor;
     let timerId: number;
 
+    /** Fungsi untuk mengetik karakter satu per satu */
     function type() {
       if (index >= text.length) {
-        // (DIUBAH) Hanya panggil onComplete jika ada teks yang diketik.
         if (text.length > 0) {
           onComplete?.();
         }
@@ -75,41 +87,31 @@ const Typewriter: React.FC<TypewriterProps> = ({
       const nextChar = text[index + 1];
       const colorKey = text[index + 2];
 
-      // 1. Cek Delay (Pause)
-      if (char === '^' && nextChar && nextChar in DEFAULT_DELAY_MAP) {
+      if (char === '^' && nextChar && nextChar in DEFAULT_DELAY_MAP) {  // Cek delay (Pause)
         const pauseUnits = DEFAULT_DELAY_MAP[nextChar as keyof typeof DEFAULT_DELAY_MAP];
         const duration = pauseUnits * basePauseMs;
         index += 2;
         timerId = window.setTimeout(type, duration);
-
-        // 2. Cek Perubahan Warna
-      } else if (char === '\\' && nextChar === 'C' && colorKey && colorKey in DEFAULT_COLOR_MAP) {
+      } else if (char === '\\' && nextChar === 'C' && colorKey && colorKey in DEFAULT_COLOR_MAP) { // Cek perubahan warna
         currentColor = DEFAULT_COLOR_MAP[colorKey as keyof typeof DEFAULT_COLOR_MAP];
         index += 3;
-
         type();
-
-        // 3. Cek Newline
-      } else if (char === '\n') {
-        // Tambahkan segmen newline khusus
+      } else if (char === '\n') { // Cek Newline atau baris baru
         setSegments((prevSegments) => [
           ...prevSegments,
           { text: '', color: currentColor, isNewLine: true }
         ]);
-        index += 1; // Loncat 1 karakter '\n'
-        type(); // Lanjut (tanpa suara, tanpa jeda ketik)
+        index += 1;
+        type();
+      } else { // Karakter biasa
 
-        // 4. Karakter Biasa
-      } else {
-
-        if (textSound && char !== ' ') {
+        if (textSound && char !== ' ') { // Mainkan suara
           const sound = textSound.cloneNode(true) as HTMLAudioElement;
           sound.volume = 1;
           sound.play().catch(e => console.error("Audio play failed:", e));
         }
 
-        // Logika untuk menambahkan karakter ke segmen
-        setSegments((prevSegments) => {
+        setSegments((prevSegments) => { // Fungsi untuk menambahkan karakter ke segmen
           const lastSegment = prevSegments[prevSegments.length - 1];
 
           if (lastSegment && lastSegment.color === currentColor && !lastSegment.isNewLine) {
@@ -121,7 +123,6 @@ const Typewriter: React.FC<TypewriterProps> = ({
             return [...prevSegments.slice(0, -1), updatedLastSegment];
 
           } else {
-            // Buat segmen baru
             return [...prevSegments, { text: char, color: currentColor }];
           }
         });
@@ -131,17 +132,17 @@ const Typewriter: React.FC<TypewriterProps> = ({
       }
     }
 
-    // Animasi ketik dimulai
+    /** Mulai animasi ketik */
     timerId = window.setTimeout(type, speed);
 
-    // Cleanup
+    /** Cleanup: Hentikan timer saat komponen unmount */
     return () => {
       window.clearTimeout(timerId);
     };
 
   }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound, onComplete]);
 
-  // Render: Map array segmen menjadi beberapa <span>
+  /** Render segmen teks dengan gaya yang sesuai */
   return (
     <span style={{ fontFamily: fontFamily }}>
       {segments.map((segment, i) => (
