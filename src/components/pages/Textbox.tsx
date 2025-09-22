@@ -110,12 +110,16 @@ const DIALOGUES_TREE: DialogueTree = {
         avatar: "ralseiangry",
         text: "* Kamu emang sengaja ya^2 bikin aku marah!?^5 \\CK..."
       },
-      { type: "end" }
+      {
+        type: "choice",
+        options: [
+          { text: "Aku mengerti", goto: "tutorial_1" },
+        ]
+      }
     ],
 }
 
-const FONT_FAMILY = "DeterminationMonoRegular";
-const DIALOGUE_FONT_SIZE = 35;
+
 
 /**
  * Textbox component untuk menampilkan dialog dan pilihan.
@@ -136,6 +140,9 @@ function Textbox() {
   const [textContainerWidth, setTextContainerWidth] = useState(0); // Lebar kontainer teks untuk wrapping
   const textContainerRef = useRef<HTMLDivElement>(null); // Ref untuk elemen kontainer teks
   const zKeyIsDown = useRef(false); // Ref untuk melacak status tombol 'z'
+
+  const FONT_FAMILY = "DeterminationMonoRegular";
+  const DIALOGUE_FONT_SIZE = 35;
 
   /** Effect untuk mengukur lebar kontainer teks */
   useEffect(() => {
@@ -267,7 +274,7 @@ function Textbox() {
       <div className={cn("transition-all duration-2000 ease-out", isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95")}>
         {currentDialogue && (
           <div className="relative w-[750px] h-48">
-            <div className={cn("bg-black border-4 border-white w-full h-full flex items-center", `text-[${DIALOGUE_FONT_SIZE}px]`)}>
+            <div className="bg-black border-4 border-white w-full h-full flex items-center">
 
               {/* Kolom 1: Avatar (HANYA MUNCUL JIKA TIDAK SEDANG MEMILIH) */}
               {!isChoosing && (
@@ -284,12 +291,16 @@ function Textbox() {
               )}
 
               {/* Kolom 2: Teks ATAU Pilihan */}
-              <div ref={textContainerRef} className={cn(
-                "h-full",
-                !isChoosing ? "flex-grow pt-4 pr-4 pb-4" : "w-full",
-                "whitespace-pre-wrap break-words leading-tight",
-                currentText.startsWith('* ') && "hanging-indent"
-              )}>
+              <div
+                ref={textContainerRef}
+                className={cn(
+                  "h-full",
+                  !isChoosing ? "flex-grow pt-4 pr-4 pb-4" : "w-full",
+                  "whitespace-pre-wrap break-words leading-tight",
+                  currentText.startsWith('* ') && "hanging-indent"
+                )}
+                style={{ fontFamily: FONT_FAMILY, fontSize: DIALOGUE_FONT_SIZE }}
+              >
 
                 {/* Tampilkan Typewriter HANYA JIKA TIDAK sedang memilih */}
                 {!isChoosing && (
