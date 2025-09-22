@@ -24,7 +24,7 @@ function App() {
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.8; // Atur ke 70%
+      audioRef.current.volume = 0.5; // Atur ke 70%
     }
   }, []);
 
@@ -65,20 +65,20 @@ function App() {
           <Textbox />
         ) : (
           <div className="text-center font-['DeterminationMonoRegular']">
-            <p className="text-white text-[2rem] mb-2 ">
+            <p className="text-white text-[2rem] mb-3 ">
               Oh ada tombol! mungkin kamu bisa menekannya?
             </p>
             <Button
               onClick={() => setshowText(true)}
-              className="px-6 py-2 text-white text-lg hover:bg-blue-700 transition-colors scale-[1.2]"
+              className="px-6 py-2 text-white text-lg bg-neutral-800 hover:bg-gray-100 hover:text-black transition-colors scale-[1.2]"
             >
               Tekan!
             </Button>
           </div>
         )}
       </main>
-      {!isMobile && <audio ref={audioRef} src="/music/fieldofhopesanddreams.mp3" loop />}
-      {!isMobile && <MusicNotifier isPlaying={showText} trackName="Toby Fox - Field of Hopes and Dreams" />}
+      {!isMobile && <audio ref={audioRef} src="/music/ruderbuster.mp3" loop />}
+      {!isMobile && <MusicNotifier isPlaying={showText} trackName="Toby Fox - Ruder Buster" />}
     </div>
   );
 }
