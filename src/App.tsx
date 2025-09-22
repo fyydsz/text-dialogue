@@ -16,25 +16,47 @@ function App() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    const audio = audioRef.current;
+    const preloadAssets = async () => {
+      const audio = audioRef.current;
+      const font = "35px DeterminationMonoRegular"; 
+      
+      const imageUrls = Object.values(SPEAKER_PROFILES).flatMap(
+        profile => profile.avatars ? Object.values(profile.avatars) : []
+      );
+      
+      const uniqueImageUrls = [...new Set(imageUrls)];
 
-    const handleAudioReady = () => {
-      setIsLoading(false); 
+      const audioPromise = new Promise<void>((resolve, reject) => {
+        if (!audio) return resolve();
+        if (audio.readyState >= 4) return resolve();
+        audio.addEventListener('canplaythrough', () => resolve(), { once: true });
+        audio.addEventListener('error', (e) => reject(new Error(`Gagal memuat audio: ${e}`)), { once: true });
+      });
+
+      const fontPromise = document.fonts.load(font);
+
+      const imagePromises = uniqueImageUrls.map(src => {
+        return new Promise<void>((resolve, reject) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error(`Gagal memuat gambar: ${src}`));
+        });
+      });
+
+      return Promise.all([audioPromise, fontPromise, ...imagePromises]);
     };
 
-    if (audio) {
-      if (audio.readyState >= 4) { 
-        handleAudioReady();
-      } else {
-        audio.addEventListener('canplaythrough', handleAudioReady);
-      }
-    }
+    preloadAssets()
+      .then(() => {
+        console.log("Semua aset berhasil dimuat!");
+        setIsLoading(false); // Sembunyikan layar loading
+      })
+      .catch(error => {
+        console.error("Terjadi kesalahan saat preloading aset:", error);
+        setIsLoading(false); // Tetap lanjutkan aplikasi walau ada error
+      });
 
-    return () => {
-      if (audio) {
-        audio.removeEventListener('canplaythrough', handleAudioReady);
-      }
-    };
   }, []);
 
   useEffect(() => {
