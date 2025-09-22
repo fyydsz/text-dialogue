@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import Typewriter from "../hooks/typing-effect";
 import { SPEAKER_PROFILES, DEFAULT_SPEAKER } from "../dialogue/speaker.config";
 import ChoiceBox from "../dialogue/Choicebox";
+import { useTextWrapper } from "../dialogue/function/useTextWrapper";
 
 /** Interface untuk profil speaker */
 interface SpeakerProfile {
@@ -58,12 +59,12 @@ const DIALOGUES_TREE: DialogueTree = {
       {
         speaker: "ralsei",
         avatar: "ralseishy",
-        text: "* Dan ini adalah teks terakhir.^5 \\CK...Mungkin?"
+        text: "* Dan ini adalah teks terakhir,^5 \\CK...Mungkin?"
       },
       {
         speaker: "ralsei",
         avatar: "ralseiserious",
-        text: "* Tunggu sebentar..^4 Ada satu hal."
+        text: "* Tunggu sebentar...^4\nAda satu hal."
       },
       {
         speaker: "ralsei",
@@ -82,13 +83,8 @@ const DIALOGUES_TREE: DialogueTree = {
     [
       {
         speaker: "ralsei",
-        avatar: "ralseiserious",
-        text: "* Hebat!^5 Terus apa lagi ya...^6 oh!"
-      },
-      {
-        speaker: "ralsei",
         avatar: "ralseijoy",
-        text: "* Ga ada,^3 hehehehehehehe."
+        text: "* Hebat!^5 Sepertinya kamu cepat beradaptasi!"
       },
       { type: "end" }
     ],
@@ -99,9 +95,27 @@ const DIALOGUES_TREE: DialogueTree = {
         avatar: "ralseiangry",
         text: "* Loh.^5 Masih kurang ngerti apa coba?"
       },
+      {
+        type: "choice",
+        options: [
+          { text: "Aku mengerti", goto: "tutorial_1" },
+          { text: "Tidak mengerti", goto: "tutorial_2-1" },
+        ]
+      }
+    ],
+  "tutorial_2-1":
+    [
+      {
+        speaker: "ralsei",
+        avatar: "ralseiangry",
+        text: "* Kamu emang sengaja ya^2 bikin aku marah!?^5 \\CK..."
+      },
       { type: "end" }
-    ]
+    ],
 }
+
+const FONT_FAMILY = "DeterminationMonoRegular";
+const DIALOGUE_FONT_SIZE = 35;
 
 /**
  * Textbox component untuk menampilkan dialog dan pilihan.
@@ -111,16 +125,43 @@ function Textbox() {
   const [isVisible, setIsVisible] = useState(false); // Kontrol visibilitas kotak teks
   const [isTyping, setIsTyping] = useState(true); // Kontrol status mengetik
   const [currentText, setCurrentText] = useState(""); // Teks saat ini yang ditampilkan
-  const [speakerProfile, setSpeakerProfile] = useState<SpeakerProfile>(DEFAULT_SPEAKER); // Profil pembicara saat ini
-  const [avatarSrc, setAvatarSrc] = useState<string | null>(null); // Sumber avatar saat ini
-  const [currentBranch, setCurrentBranch] = useState('start'); // Node dialog saat ini
-  const [currentIndex, setCurrentIndex] = useState(0); // Indeks dialog saat ini dalam node
+  const [speakerProfile, setSpeakerProfile] = useState<SpeakerProfile>(DEFAULT_SPEAKER); // Profil pembicara 
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null); // Sumber avatar
+  const [currentBranch, setCurrentBranch] = useState('start'); // Node dialog
+  const [currentIndex, setCurrentIndex] = useState(0); // Indeks node dialog
   const [isChoosing, setIsChoosing] = useState(false); // Apakah sedang dalam mode memilih
-  const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]); // Opsi pilihan saat ini
+  const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]); // Opsi pilihan
   const [selectedChoiceIndex, setSelectedChoiceIndex] = useState(0); // Indeks pilihan yang dipilih
   const [inputLocked, setInputLocked] = useState(false); // Kontrol penguncian input
+  const [textContainerWidth, setTextContainerWidth] = useState(0); // Lebar kontainer teks untuk wrapping
+  const textContainerRef = useRef<HTMLDivElement>(null); // Ref untuk elemen kontainer teks
   const zKeyIsDown = useRef(false); // Ref untuk melacak status tombol 'z'
 
+  /** Effect untuk mengukur lebar kontainer teks */
+  useEffect(() => {
+    function measureContainer() {
+      if (textContainerRef.current) {
+        const element = textContainerRef.current;
+        const style = window.getComputedStyle(element);
+        const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const newWidth = element.offsetWidth - paddingX;
+        setTextContainerWidth(newWidth);
+      }
+    }
+    if (isVisible) {
+      measureContainer();
+    }
+  }, [isVisible]);
+
+  /** Dialog saat ini */
+  const currentDialogue = DIALOGUES_TREE[currentBranch]?.[currentIndex];
+
+  /** Text wrapping dengan custom hook */
+  const wrappedText = useTextWrapper(
+    currentDialogue && currentDialogue.type !== 'choice' && currentDialogue.type !== 'end' ? currentDialogue.text : "",
+    textContainerWidth,
+    `${DIALOGUE_FONT_SIZE}px ${FONT_FAMILY}`
+  );
   /** Effect untuk mengatur dialog */
   useEffect(() => {
     const dialogueNode = DIALOGUES_TREE[currentBranch]?.[currentIndex];
@@ -143,21 +184,23 @@ function Textbox() {
       setIsVisible(false);
     } else { // Mode dialog biasa
       setIsTyping(true);
-      setCurrentText(""); 
-      setInputLocked(true)
+      setCurrentText("");
 
-      // 1. Perbarui profil speaker dan avatar
+
+      // 1. Set profil speaker dan avatar
       const profile = SPEAKER_PROFILES[dialogueNode.speaker] || DEFAULT_SPEAKER;
       setSpeakerProfile(profile);
       const avatarPath = profile.avatars?.[dialogueNode.avatar] || profile.avatars?.default;
       setAvatarSrc(avatarPath || null);
 
-      // 2. Fungsi khusus untuk mulai mengetik
+      // 2. Fungsi untuk memulai aksi mengetik
       const startTypingAction = () => {
-        setCurrentText(dialogueNode.text);
+        if (wrappedText) {
+          setCurrentText(wrappedText);
+        }
       };
 
-      // 3. Terapkan delay HANYA pada aksi mengetik pada dialog pertama
+      // 3. Set delay typing untuk dialog pertama
       if (currentBranch === 'start' && currentIndex === 0) {
         const timer = setTimeout(startTypingAction, 1000);
         return () => clearTimeout(timer);
@@ -165,7 +208,7 @@ function Textbox() {
         startTypingAction();
       }
     }
-  }, [currentBranch, currentIndex]);
+  }, [currentBranch, currentIndex, wrappedText]);
 
   /** Callback saat mengetik selesai */
   const handleTypingComplete = useCallback(() => {
@@ -217,14 +260,14 @@ function Textbox() {
   }, [handleKeyDown, handleKeyUp]);
 
   // Dialog saat ini
-  const currentDialogue = DIALOGUES_TREE[currentBranch]?.[currentIndex];
+
 
   return (
     <div className="flex flex-col items-center space-y-4">
       <div className={cn("transition-all duration-2000 ease-out", isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95")}>
         {currentDialogue && (
           <div className="relative w-[750px] h-48">
-            <div className="bg-black border-4 border-white w-full h-full flex items-center text-[35px]">
+            <div className={cn("bg-black border-4 border-white w-full h-full flex items-center", `text-[${DIALOGUE_FONT_SIZE}px]`)}>
 
               {/* Kolom 1: Avatar (HANYA MUNCUL JIKA TIDAK SEDANG MEMILIH) */}
               {!isChoosing && (
@@ -241,7 +284,7 @@ function Textbox() {
               )}
 
               {/* Kolom 2: Teks ATAU Pilihan */}
-              <div className={cn(
+              <div ref={textContainerRef} className={cn(
                 "h-full",
                 !isChoosing ? "flex-grow pt-4 pr-4 pb-4" : "w-full",
                 "whitespace-pre-wrap break-words leading-tight",
