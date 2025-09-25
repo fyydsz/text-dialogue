@@ -16,11 +16,21 @@ const DEFAULT_DELAY_MAP = {
 };
 
 /** Interface untuk segmen teks dengan warna & baris baru */
-interface TextSegment {
+type TextSegment = {
+  type: 'text';
   text: string;
   color: string;
   isNewLine?: boolean;
-}
+};
+
+type ComponentSegment = {
+  type: 'component';
+  key: string; // Kunci unik untuk rendering
+  component: React.ReactNode;
+};
+
+type Segment = TextSegment | ComponentSegment;
+
 
 // Interface props untuk komponen Typewriter
 interface TypewriterProps {
@@ -39,6 +49,8 @@ interface TypewriterProps {
   colorMap?: { [key: string]: string },
   /** OnComplete callback */
   onComplete?: () => void,
+  /** Map untuk ikon, e.g., <ICON:ArrowBigRight> */
+  iconMap?: { [key: string]: React.ReactNode | ((color: string) => React.ReactNode) };
 }
 
 const Typewriter: React.FC<TypewriterProps> = ({
@@ -53,9 +65,10 @@ const Typewriter: React.FC<TypewriterProps> = ({
   /** Map untuk jeda teks */
   colorMap = DEFAULT_COLOR_MAP,
   onComplete,
+  iconMap = {},
 }) => {
   /** State untuk menyimpan segmen teks yang sudah diproses */
-  const [segments, setSegments] = useState<TextSegment[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
 
   /** Objek audio untuk efek suara */
   const textSound = useMemo(() => {
@@ -73,6 +86,8 @@ const Typewriter: React.FC<TypewriterProps> = ({
     let index = 0;
     let currentColor = defaultColor;
     let timerId: number;
+    // Check icon regex
+    const iconRegex = /<ICON:(\w+)>/;
 
     /** Fungsi untuk mengetik karakter satu per satu */
     function type() {
@@ -80,6 +95,26 @@ const Typewriter: React.FC<TypewriterProps> = ({
         if (text.length > 0) {
           onComplete?.();
         }
+        return;
+      }
+
+      const remainingText = text.substring(index);
+      const match = remainingText.match(iconRegex);
+
+      if (match && match.index === 0) {
+        const iconName = match[1];
+        const iconGenerator = iconMap[iconName];
+        if (iconGenerator) {
+          const iconComponent = typeof iconGenerator === 'function'
+            ? (iconGenerator as (color: string) => React.ReactNode)(currentColor)
+            : iconGenerator;
+          setSegments((prevSegments) => [
+            ...prevSegments,
+            { type: 'component', key: `icon-${index}`, component: iconComponent }
+          ]);
+        }
+        index += match[0].length;
+        type();
         return;
       }
 
@@ -99,10 +134,22 @@ const Typewriter: React.FC<TypewriterProps> = ({
       } else if (char === '\n') { // Cek Newline atau baris baru
         setSegments((prevSegments) => [
           ...prevSegments,
-          { text: '', color: currentColor, isNewLine: true }
+          { type: 'text', text: '', color: currentColor, isNewLine: true }
         ]);
         index += 1;
         type();
+      } else if (char === '\\' && nextChar === 'N') { // Cek baris baru DENGAN BINTANG
+        setSegments((prevSegments) => [
+          ...prevSegments,
+          // Buat segmen baris baru biasa
+          { type: 'text', text: '', color: currentColor, isNewLine: true },
+          // Lalu, langsung tambahkan segmen baru berisi bintang
+          { type: 'text', text: '* ', color: defaultColor } // Bintang selalu warna default (putih)
+        ]);
+        index += 2; // Lompati dua karakter: '\' dan 'N'
+        type(); // Lanjutkan tanpa delay
+        // ▲▲▲ AKHIR BLOK BARU ▲▲▲
+
       } else { // Karakter biasa
 
         if (textSound && char !== ' ') { // Mainkan suara
@@ -114,7 +161,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
         setSegments((prevSegments) => { // Fungsi untuk menambahkan karakter ke segmen
           const lastSegment = prevSegments[prevSegments.length - 1];
 
-          if (lastSegment && lastSegment.color === currentColor && !lastSegment.isNewLine) {
+          if (lastSegment && lastSegment.type === 'text' && lastSegment.color === currentColor && !lastSegment.isNewLine && lastSegment.text !== '* ') {
 
             const updatedLastSegment = {
               ...lastSegment,
@@ -123,7 +170,7 @@ const Typewriter: React.FC<TypewriterProps> = ({
             return [...prevSegments.slice(0, -1), updatedLastSegment];
 
           } else {
-            return [...prevSegments, { text: char, color: currentColor }];
+            return [...prevSegments, { type: 'text', text: char, color: currentColor }];
           }
         });
 
@@ -140,19 +187,30 @@ const Typewriter: React.FC<TypewriterProps> = ({
       window.clearTimeout(timerId);
     };
 
-  }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound, onComplete]);
+  }, [text, speed, basePauseMs, soundSrc, defaultColor, iconMap, colorMap, textSound, onComplete]);
 
   /** Render segmen teks dengan gaya yang sesuai */
   return (
     <span style={{ fontFamily: fontFamily }}>
-      {segments.map((segment, i) => (
-        segment.isNewLine ? (
-          <br key={i} />
-        ) : (
-          <span key={i} style={{ color: segment.color }}>
-            {segment.text}
-          </span>
-        )))}
+      {segments.map((segment, i) => {
+        // Saran 1: Gunakan if/else agar lebih mudah dibaca daripada nested ternary
+        if (segment.type === 'component') {
+          // Saran 2: Gunakan React.Fragment agar tidak menambah <span> yang tidak perlu
+          return <React.Fragment key={segment.key}>{segment.component}</React.Fragment>;
+        }
+
+        // Ini adalah segmen teks
+        if (segment.isNewLine) {
+          // Saran 3: Buat key lebih unik dengan prefix
+          return <br key={`br-${i}`} />;
+        } else {
+          return (
+            <span key={`text-${i}`} style={{ color: segment.color }}>
+              {segment.text}
+            </span>
+          );
+        }
+      })}
     </span>
   );
 };
