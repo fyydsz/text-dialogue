@@ -18,7 +18,8 @@ export const useTextWrapper = (text: string, maxWidth: number, font: string): st
     context.font = font;
 
     const cleanTextForMeasuring = (str: string) => {
-      return str.replace(/\^\d/g, '').replace(/\\C[A-Z]/g, '');
+      // Hapus kode pause, kode warna, DAN placeholder ikon
+      return str.replace(/\^\d/g, '').replace(/\\C[A-Z]/g, '').replace(/<ICON:\w+>/g, ' ');
     };
 
     // 1. Pecah teks berdasarkan \n manual TERLEBIH DAHULU
@@ -28,7 +29,7 @@ export const useTextWrapper = (text: string, maxWidth: number, font: string): st
     const processedParagraphs = manualLines.map(paragraph => {
       // Lewati paragraf kosong untuk menghindari baris baru yang tidak diinginkan
       if (paragraph === '') {
-          return '';
+        return '';
       }
 
       const words = paragraph.split(' ');
