@@ -4,6 +4,13 @@ import Typewriter from "../hooks/typing-effect";
 import { SPEAKER_PROFILES, DEFAULT_SPEAKER } from "../dialogue/speaker.config";
 import ChoiceBox from "../dialogue/Choicebox";
 import { useTextWrapper } from "../dialogue/function/useTextWrapper";
+import { ArrowBigLeft, ArrowBigRight } from "lucide-react";
+
+/** Map untuk ikon */
+const ICON_MAP: { [key: string]: (color: string) => React.ReactNode } = {
+  'ArrowBigLeft': (color) => <ArrowBigLeft className="inline-block align-middle" style={{ color: color }} size={30} />,
+  'ArrowBigRight': (color) => <ArrowBigRight className="inline-block align-middle" style={{ color: color }} size={30} />,
+};
 
 /** Interface untuk profil speaker */
 interface SpeakerProfile {
@@ -69,7 +76,7 @@ const DIALOGUES_TREE: DialogueTree = {
       {
         speaker: "ralsei",
         avatar: "ralseijoy",
-        text: "* Kamu bisa menggunakan tombol \\CK⮜ dan ⮞ \\CPuntuk memilih opsi yang tersedia."
+        text: `* Kamu bisa menggunakan tombol \\CK<ICON:ArrowBigLeft> dan <ICON:ArrowBigRight> \\N\\CPUntuk memilih opsi.`
       },
       {
         type: "choice",
@@ -310,6 +317,7 @@ function Textbox() {
                     basePauseMs={1000 / 30}
                     soundSrc={speakerProfile.soundSrc}
                     onComplete={handleTypingComplete}
+                    iconMap={ICON_MAP}
                   />
                 )}
 
