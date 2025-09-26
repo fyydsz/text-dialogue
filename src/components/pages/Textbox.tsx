@@ -1,16 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import Typewriter from "../hooks/typing-effect";
 import { SPEAKER_PROFILES, DEFAULT_SPEAKER } from "../dialogue/speaker.config";
 import ChoiceBox from "../dialogue/Choicebox";
 import { useTextWrapper } from "../dialogue/function/useTextWrapper";
 import { ArrowBigLeft, ArrowBigRight } from "lucide-react";
-
-/** Map untuk ikon */
-const ICON_MAP: { [key: string]: (color: string) => React.ReactNode } = {
-  'ArrowBigLeft': (color) => <ArrowBigLeft className="inline-block align-middle" style={{ color: color }} size={30} />,
-  'ArrowBigRight': (color) => <ArrowBigRight className="inline-block align-middle" style={{ color: color }} size={30} />,
-};
+import dialoguesData from "./dialogues.json";
+import { useMusicControl } from "../context/MusicContext";
 
 /** Interface untuk profil speaker */
 interface SpeakerProfile {
@@ -25,17 +21,20 @@ type DialogueNodeObject = {
   avatar: string;
   text: string;
   type?: undefined;
+  musicAction?: 'pause' | 'resume';
 } | {
   type: 'choice';
   options: { text: string; goto: string; }[];
   speaker?: undefined;
   avatar?: undefined;
   text?: undefined;
+  musicAction?: 'pause' | 'resume';
 } | {
   type: 'end';
   speaker?: undefined;
   avatar?: undefined;
   text?: undefined;
+  musicAction?: 'pause' | 'resume';
 };
 
 /** Tipe untuk pohon dialog */
@@ -49,82 +48,8 @@ interface ChoiceOption {
   goto: string;
 }
 
-/** Pohon dialog */
-const DIALOGUES_TREE: DialogueTree = {
-  "start":
-    [
-      {
-        speaker: "ralsei",
-        avatar: "ralseiserious",
-        text: "* Halo,^3 ini teks pertamamu!^5 Kamu bisa menekan tombol \\CK\"z\"^1 \\CPuntuk melanjutkan!"
-      },
-      {
-        speaker: "ralsei",
-        avatar: "ralseismile2",
-        text: "* Kamu berhasil menekan tombol \\CK\"z\"\\CP.^5 \\CPIni adalah teks kedua.^3 \\CKSelamat!"
-      },
-      {
-        speaker: "ralsei",
-        avatar: "ralseishy",
-        text: "* Dan ini adalah teks terakhir,^5 \\CK...Mungkin?"
-      },
-      {
-        speaker: "ralsei",
-        avatar: "ralseiserious",
-        text: "* Tunggu sebentar...^4\nAda satu hal."
-      },
-      {
-        speaker: "ralsei",
-        avatar: "ralseijoy",
-        text: `* Kamu bisa menggunakan tombol \\CK<ICON:ArrowBigLeft> dan <ICON:ArrowBigRight> \\N\\CPUntuk memilih opsi.`
-      },
-      {
-        type: "choice",
-        options: [
-          { text: "Aku mengerti", goto: "tutorial_1" },
-          { text: "Tidak mengerti", goto: "tutorial_2" },
-        ]
-      }
-    ],
-  "tutorial_1":
-    [
-      {
-        speaker: "ralsei",
-        avatar: "ralseijoy",
-        text: "* Hebat!^5 Sepertinya kamu cepat beradaptasi!"
-      },
-      { type: "end" }
-    ],
-  "tutorial_2":
-    [
-      {
-        speaker: "ralsei",
-        avatar: "ralseiangry",
-        text: "* Loh.^5 Masih kurang ngerti apa coba?"
-      },
-      {
-        type: "choice",
-        options: [
-          { text: "Aku mengerti", goto: "tutorial_1" },
-          { text: "Tidak mengerti", goto: "tutorial_2-1" },
-        ]
-      }
-    ],
-  "tutorial_2-1":
-    [
-      {
-        speaker: "ralsei",
-        avatar: "ralseiangry",
-        text: "* Kamu emang sengaja ya^2 bikin aku marah!?^5 \\CK..."
-      },
-      {
-        type: "choice",
-        options: [
-          { text: "Aku mengerti", goto: "tutorial_1" },
-        ]
-      }
-    ],
-}
+/** Pohon dialog dari JSON */
+const DIALOGUES_TREE: DialogueTree = dialoguesData as DialogueTree;
 
 
 
@@ -133,6 +58,13 @@ const DIALOGUES_TREE: DialogueTree = {
  * @returns JSX.Element
  */
 function Textbox() {
+  const { pauseMusic, resumeMusic } = useMusicControl();
+
+  const ICON_MAP = useMemo(() => ({
+    'ArrowBigLeft': (color: string) => <ArrowBigLeft className="inline-block align-middle" style={{ color: color }} size={30} />,
+    'ArrowBigRight': (color: string) => <ArrowBigRight className="inline-block align-middle" style={{ color: color }} size={30} />,
+  }), []);
+
   const [isVisible, setIsVisible] = useState(false); // Kontrol visibilitas kotak teks
   const [isTyping, setIsTyping] = useState(true); // Kontrol status mengetik
   const [currentText, setCurrentText] = useState(""); // Teks saat ini yang ditampilkan
@@ -147,6 +79,7 @@ function Textbox() {
   const [textContainerWidth, setTextContainerWidth] = useState(0); // Lebar kontainer teks untuk wrapping
   const textContainerRef = useRef<HTMLDivElement>(null); // Ref untuk elemen kontainer teks
   const zKeyIsDown = useRef(false); // Ref untuk melacak status tombol 'z'
+  const isTypingInProgress = useRef(false); // Ref untuk melacak apakah sedang typing
 
   const FONT_FAMILY = "DeterminationMonoRegular";
   const DIALOGUE_FONT_SIZE = 35;
@@ -191,15 +124,21 @@ function Textbox() {
     if (dialogueNode.type === 'choice') { // Mode pilihan
       setCurrentText("");
       setIsTyping(false);
+      isTypingInProgress.current = false;
       setChoiceOptions(dialogueNode.options);
       setSelectedChoiceIndex(0);
       setIsChoosing(true);
     } else if (dialogueNode.type === 'end') { // Mode akhir dialog
       setIsVisible(false);
+      isTypingInProgress.current = false;
     } else { // Mode dialog biasa
       setIsTyping(true);
+      isTypingInProgress.current = true;
       setCurrentText("");
 
+      // Reset input states
+      setInputLocked(false);
+      zKeyIsDown.current = false;
 
       // 1. Set profil speaker dan avatar
       const profile = SPEAKER_PROFILES[dialogueNode.speaker] || DEFAULT_SPEAKER;
@@ -224,9 +163,23 @@ function Textbox() {
     }
   }, [currentBranch, currentIndex, wrappedText]);
 
+  /** Effect terpisah untuk music actions agar tidak trigger re-render text */
+  useEffect(() => {
+    const dialogueNode = DIALOGUES_TREE[currentBranch]?.[currentIndex];
+    if (!dialogueNode) return;
+
+    // Handle music actions
+    if (dialogueNode.musicAction === 'pause') {
+      pauseMusic();
+    } else if (dialogueNode.musicAction === 'resume') {
+      resumeMusic();
+    }
+  }, [currentBranch, currentIndex, pauseMusic, resumeMusic]);
+
   /** Callback saat mengetik selesai */
   const handleTypingComplete = useCallback(() => {
     setIsTyping(false);
+    isTypingInProgress.current = false;
     if (zKeyIsDown.current) {
       setInputLocked(true);
     }
@@ -234,6 +187,11 @@ function Textbox() {
 
   /** Event handler untuk penekanan tombol */
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Ignore all keyboard input if currently typing in progress (prevents interruption)
+    if (isTypingInProgress.current && isTyping) {
+      return;
+    }
+
     if (isChoosing) {
       if (event.key === 'ArrowRight') { // Navigasi pilihan 
         setSelectedChoiceIndex(prev => (prev + 1) % choiceOptions.length);
@@ -250,6 +208,9 @@ function Textbox() {
       if (event.key.toLowerCase() === 'z') {
         zKeyIsDown.current = true
         if (isTyping || inputLocked) return; // Abaikan jika sedang mengetik
+        
+        // Reset states before moving to next dialogue
+        setInputLocked(false);
         setCurrentIndex(prev => prev + 1);
       }
     }
