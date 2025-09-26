@@ -17,45 +17,59 @@ export const useTextWrapper = (text: string, maxWidth: number, font: string): st
     }
     context.font = font;
 
+    
     const cleanTextForMeasuring = (str: string) => {
       // Hapus kode pause, kode warna, DAN placeholder ikon
-      return str.replace(/\^\d/g, '').replace(/\\C[A-Z]/g, '').replace(/<ICON:\w+>/g, ' ');
+      return str.replace(/\^\d/g, '').replace(/\\C[A-Z]/g, '').replace(/<ICON:\w+>/g, '').replace(/\\N/g, '');
     };
 
-    // 1. Pecah teks berdasarkan \n manual TERLEBIH DAHULU
-    const manualLines = text.split('\n');
+    // 1. Ganti \\N dengan placeholder unik untuk melindunginya dari splitting
+    const placeholder = '___NEWLINE_MARKER___';
+    const textWithPlaceholders = text.replace(/\\N/g, placeholder);
 
-    // 2. Terapkan word-wrap otomatis ke setiap baris manual secara terpisah
+    // 2. Pecah teks berdasarkan \n manual TERLEBIH DAHULU
+    const manualLines = textWithPlaceholders.split('\n');
+
+    // 3. Terapkan word-wrap otomatis ke setiap baris manual secara terpisah
     const processedParagraphs = manualLines.map(paragraph => {
       // Lewati paragraf kosong untuk menghindari baris baru yang tidak diinginkan
       if (paragraph === '') {
         return '';
       }
 
-      const words = paragraph.split(' ');
-      const autoWrappedLines: string[] = [];
-      let currentLine = '';
+      // Pecah berdasarkan \\N placeholder juga untuk menghindari wrapping di tengahnya
+      const segments = paragraph.split(placeholder);
+      
+      const wrappedSegments = segments.map(segment => {
+        if (segment === '') return '';
+        
+        const words = segment.split(' ');
+        const autoWrappedLines: string[] = [];
+        let currentLine = '';
 
-      words.forEach(word => {
-        const separator = currentLine === '' ? '' : ' ';
-        const testLine = currentLine + separator + word;
-        const testLineWidth = context.measureText(cleanTextForMeasuring(testLine)).width;
+        words.forEach(word => {
+          const separator = currentLine === '' ? '' : ' ';
+          const testLine = currentLine + separator + word;
+          const testLineWidth = context.measureText(cleanTextForMeasuring(testLine)).width;
 
-        // Cek `currentLine !== ''` untuk mencegah baris kosong jika kata pertama sudah terlalu panjang
-        if (testLineWidth > maxWidth && currentLine !== '') {
-          autoWrappedLines.push(currentLine);
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
+          // Cek `currentLine !== ''` untuk mencegah baris kosong jika kata pertama sudah terlalu panjang
+          if (testLineWidth > maxWidth && currentLine !== '') {
+            autoWrappedLines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        });
+        autoWrappedLines.push(currentLine);
+
+        return autoWrappedLines.join('\n');
       });
-      autoWrappedLines.push(currentLine);
 
-      // Gabungkan kembali baris yang sudah di-wrap otomatis
-      return autoWrappedLines.join('\n');
+      // Gabungkan kembali dengan \\N
+      return wrappedSegments.join('\\N');
     });
 
-    // 3. Gabungkan kembali semua paragraf yang telah diproses
+    // 4. Gabungkan kembali semua paragraf yang telah diproses
     return processedParagraphs.join('\n');
 
   }, [text, maxWidth, font]);
