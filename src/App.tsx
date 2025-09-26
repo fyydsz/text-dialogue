@@ -7,13 +7,92 @@ import { cn } from './lib/utils';
 import Typewriter from './components/hooks/typing-effect';
 import { SPEAKER_PROFILES } from "./components/dialogue/speaker.config";
 import { Button } from './components/ui/button';
+import VolumeBar from './components/hooks/volume-bar';
+import { MusicProvider } from './components/context/MusicContext';
 
 function App() {
   const isMobile = useIsMobile();
   const [showText, setshowText] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [volume, setVolume] = useState(0.5);
+  const [currentTrack, setCurrentTrack] = useState("");
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [musicQueue, setMusicQueue] = useState<string[]>([]);
+  const [showNewTrackNotif, setShowNewTrackNotif] = useState(false);
+  const [isMusicPaused, setIsMusicPaused] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Functions to control music playback
+  const pauseMusic = () => {
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+      setIsMusicPaused(true);
+      console.log("Music paused for comedic effect");
+    }
+  };
+
+  const resumeMusic = () => {
+    if (audioRef.current && audioRef.current.paused && isMusicPaused) {
+      audioRef.current.play().catch(console.error);
+      setIsMusicPaused(false);
+      console.log("Music resumed");
+    }
+  };
+
+  // Music files available for random selection
+  const musicTracks = [
+    "field_of_hopes_and_dreams.mp3",
+    "rude_buster.mp3",
+    "ruder_buster.mp3",
+    "the_third_sanctuary.mp3",
+  ];
+
+  // Function to shuffle array
+  const shuffleArray = (array: string[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Function to create shuffled music queue
+  const createMusicQueue = () => {
+    return shuffleArray(musicTracks);
+  };
+
+  // Function to get next track in queue
+  const getNextTrack = (): { track: string; index: number } | null => {
+    if (musicQueue.length === 0) return null;
+    const nextIndex = (currentTrackIndex + 1) % musicQueue.length;
+    return { track: musicQueue[nextIndex], index: nextIndex };
+  };
+
+  // Function to get track display name
+  const getTrackDisplayName = (filename: string) => {
+    const trackNames: { [key: string]: string } = {
+      "dogsong.mp3": "Toby Fox - Dogsong",
+      "field_of_hopes_and_dreams.mp3": "Toby Fox - Field of Hopes and Dreams",
+      "rude_buster.mp3": "Toby Fox - Rude Buster",
+      "ruder_buster.mp3": "Toby Fox - Ruder Buster",
+      "the_third_sanctuary.mp3": "Toby Fox - The Third Sanctuary",
+    };
+    return trackNames[filename] || filename;
+  };
+
+  useEffect(() => {
+    // Initialize music queue and set first track on component mount
+    if (!isMobile) {
+      const queue = createMusicQueue();
+      setMusicQueue(queue);
+      setCurrentTrack(queue[0]);
+      setCurrentTrackIndex(0);
+    } else {
+      setCurrentTrack("dogsong.mp3");
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     const preloadAssets = async () => {
@@ -59,19 +138,146 @@ function App() {
 
   }, []);
 
-  useEffect(() => {
-    if (showText) {
-      audioRef.current?.play().catch(error => {
-        console.error("Audio play was prevented:", error);
-      });
-    }
-  }, [showText]);
+
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.5; // Atur ke 70%
+      audioRef.current.volume = volume;
     }
-  }, []);
+  }, [volume]);
+
+  // Set volume when currentTrack changes or audio is ready
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && currentTrack) {
+      const setVolumeWhenReady = () => {
+        audio.volume = volume;
+      };
+
+      // Set volume immediately if audio is already loaded
+      if (audio.readyState >= 1) {
+        audio.volume = volume;
+      } else {
+        // Wait for audio to be ready
+        audio.addEventListener('loadedmetadata', setVolumeWhenReady, { once: true });
+      }
+
+      return () => {
+        audio.removeEventListener('loadedmetadata', setVolumeWhenReady);
+      };
+    }
+  }, [currentTrack, volume]);
+
+  // Handle track ended event to play next song
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && !isMobile && musicQueue.length > 0) {
+      const handleTrackEnded = () => {
+        console.log("Track ended, getting next track...");
+        const nextTrack = getNextTrack();
+        console.log("Next track:", nextTrack);
+        if (nextTrack) {
+          console.log("Setting next track:", nextTrack.track);
+          setCurrentTrack(nextTrack.track);
+          setCurrentTrackIndex(nextTrack.index);
+          setShowNewTrackNotif(true);
+          
+          // Hide notification after 5 seconds
+          setTimeout(() => {
+            setShowNewTrackNotif(false);
+          }, 5000);
+        }
+      };
+
+      audio.addEventListener('ended', handleTrackEnded);
+
+      return () => {
+        audio.removeEventListener('ended', handleTrackEnded);
+      };
+    }
+  }, [musicQueue, currentTrackIndex, isMobile]);
+
+  // Auto play when track changes (except for initial load)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && currentTrack && showText) {
+      const playAudio = async () => {
+        try {
+          console.log("Playing track:", currentTrack);
+          await audio.play();
+        } catch (error) {
+          console.error("Failed to play next track:", error);
+        }
+      };
+
+      // Small delay to ensure audio src is updated
+      const playTimer = setTimeout(() => {
+        playAudio();
+      }, 100);
+
+      return () => {
+        clearTimeout(playTimer);
+      };
+    }
+  }, [currentTrack, showText]);
+
+  // Set up Media Session API for browser media controls
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrack && !isMobile) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: getTrackDisplayName(currentTrack),
+        artist: "Toby Fox",
+        album: "Undertale/Deltarune OST",
+      });
+
+      // Use throttling to prevent rapid music skipping from interfering with dialogue
+      let nextTrackCooldown = false;
+      let prevTrackCooldown = false;
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        if (nextTrackCooldown) return;
+        nextTrackCooldown = true;
+        
+        const nextTrack = getNextTrack();
+        if (nextTrack) {
+          setCurrentTrack(nextTrack.track);
+          setCurrentTrackIndex(nextTrack.index);
+          setShowNewTrackNotif(true);
+          setTimeout(() => setShowNewTrackNotif(false), 5000);
+        }
+        
+        // Cooldown to prevent rapid skipping
+        setTimeout(() => {
+          nextTrackCooldown = false;
+        }, 1000);
+      });
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (prevTrackCooldown) return;
+        prevTrackCooldown = true;
+        
+        const prevIndex = currentTrackIndex === 0 
+          ? musicQueue.length - 1 
+          : currentTrackIndex - 1;
+        
+        if (musicQueue[prevIndex]) {
+          setCurrentTrack(musicQueue[prevIndex]);
+          setCurrentTrackIndex(prevIndex);
+          setShowNewTrackNotif(true);
+          setTimeout(() => setShowNewTrackNotif(false), 5000);
+        }
+        
+        // Cooldown to prevent rapid skipping
+        setTimeout(() => {
+          prevTrackCooldown = false;
+        }, 1000);
+      });
+    }
+  }, [currentTrack, currentTrackIndex, musicQueue, isMobile]);
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+  };
 
   return (
     <div className={cn(
@@ -113,7 +319,13 @@ function App() {
               )}
             </div>
           ) : showText ? (
-            <Textbox />
+            <MusicProvider 
+              pauseMusic={pauseMusic} 
+              resumeMusic={resumeMusic} 
+              isPaused={isMusicPaused}
+            >
+              <Textbox />
+            </MusicProvider>
           ) : (
             <div className="text-center font-['DeterminationMonoRegular']">
               <p className="text-white text-[2rem] mb-3 ">
@@ -129,10 +341,17 @@ function App() {
           )}
         </main>
       )}
-      {!isMobile && <audio ref={audioRef} src="/music/ruderbuster.mp3" loop />}
-      {!isMobile && <MusicNotifier isPlaying={showText} trackName="Toby Fox - Ruder Buster" />}
-      {/* If its mobile play a song */}
-      {isMobile && <audio ref={audioRef} src="/music/dogsong.mp3" loop />}
+      {currentTrack && <audio ref={audioRef} src={`/sound/music/${currentTrack}`} />}
+      {!isMobile && (
+        <MusicNotifier 
+          key={currentTrack} // Force remount on track change
+          isPlaying={showText} 
+          trackName={showNewTrackNotif ? `🔄 ${getTrackDisplayName(currentTrack)}` : getTrackDisplayName(currentTrack)} 
+        />
+      )}
+      {!isMobile && !isLoading && (
+        <VolumeBar volume={volume} onVolumeChange={handleVolumeChange} />
+      )}
     </div>
 
   );
