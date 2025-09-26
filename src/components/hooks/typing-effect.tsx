@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 /** Map untuk warna teks */
 const DEFAULT_COLOR_MAP = { 'P': '#FFFFFF', 'K': '#FFCC00', 'M': '#FF0000' };
@@ -21,6 +21,7 @@ type TextSegment = {
   text: string;
   color: string;
   isNewLine?: boolean;
+  isFirstInParagraph?: boolean;
 };
 
 type ComponentSegment = {
@@ -69,6 +70,13 @@ const Typewriter: React.FC<TypewriterProps> = ({
 }) => {
   /** State untuk menyimpan segmen teks yang sudah diproses */
   const [segments, setSegments] = useState<Segment[]>([]);
+  const onCompleteRef = useRef(onComplete);
+  const iconMapRef = useRef(iconMap); 
+
+   useEffect(() => {
+    onCompleteRef.current = onComplete;
+    iconMapRef.current = iconMap;
+  });
 
   /** Objek audio untuk efek suara */
   const textSound = useMemo(() => {
@@ -134,22 +142,18 @@ const Typewriter: React.FC<TypewriterProps> = ({
       } else if (char === '\n') { // Cek Newline atau baris baru
         setSegments((prevSegments) => [
           ...prevSegments,
-          { type: 'text', text: '', color: currentColor, isNewLine: true }
+          { type: 'text', text: '', color: currentColor, isNewLine: true },
         ]);
         index += 1;
         type();
-      } else if (char === '\\' && nextChar === 'N') { // Cek baris baru DENGAN BINTANG
+      } else if (char === '\\' && nextChar === 'N') { // Cek Newline dan tambahkan '* ' di awal baris baru
         setSegments((prevSegments) => [
           ...prevSegments,
-          // Buat segmen baris baru biasa
-          { type: 'text', text: '', color: currentColor, isNewLine: true },
-          // Lalu, langsung tambahkan segmen baru berisi bintang
-          { type: 'text', text: '* ', color: defaultColor } // Bintang selalu warna default (putih)
+          { type: 'text', text: '', color: currentColor, isNewLine: true, },
+          { type: 'text', text: '', color: currentColor, isFirstInParagraph: true },
         ]);
-        index += 2; // Lompati dua karakter: '\' dan 'N'
-        type(); // Lanjutkan tanpa delay
-        // ▲▲▲ AKHIR BLOK BARU ▲▲▲
-
+        index += 2;
+        type();
       } else { // Karakter biasa
 
         if (textSound && char !== ' ') { // Mainkan suara
@@ -187,25 +191,29 @@ const Typewriter: React.FC<TypewriterProps> = ({
       window.clearTimeout(timerId);
     };
 
-  }, [text, speed, basePauseMs, soundSrc, defaultColor, iconMap, colorMap, textSound, onComplete]);
+  }, [text, speed, basePauseMs, soundSrc, defaultColor, colorMap, textSound]);
 
   /** Render segmen teks dengan gaya yang sesuai */
   return (
     <span style={{ fontFamily: fontFamily }}>
       {segments.map((segment, i) => {
-        // Saran 1: Gunakan if/else agar lebih mudah dibaca daripada nested ternary
         if (segment.type === 'component') {
-          // Saran 2: Gunakan React.Fragment agar tidak menambah <span> yang tidak perlu
           return <React.Fragment key={segment.key}>{segment.component}</React.Fragment>;
         }
 
         // Ini adalah segmen teks
         if (segment.isNewLine) {
-          // Saran 3: Buat key lebih unik dengan prefix
           return <br key={`br-${i}`} />;
         } else {
+          const style: React.CSSProperties = {
+            color: segment.color,
+          };
+          if (segment.isFirstInParagraph) {
+            // Asumsi indentasi kita adalah 2 karakter ('* ')
+            style.marginLeft = '-1.85ch';
+          }
           return (
-            <span key={`text-${i}`} style={{ color: segment.color }}>
+            <span key={`text-${i}`} style={style}>
               {segment.text}
             </span>
           );
