@@ -344,7 +344,7 @@ function App() {
       {currentTrack && <audio ref={audioRef} src={`/sound/music/${currentTrack}`} />}
       {!isMobile && (
         <MusicNotifier 
-          key={currentTrack} // Force remount on track change
+          key={currentTrack} 
           isPlaying={showText} 
           trackName={showNewTrackNotif ? `🔄 ${getTrackDisplayName(currentTrack)}` : getTrackDisplayName(currentTrack)} 
         />
