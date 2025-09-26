@@ -7,11 +7,11 @@ interface SpeakerProfile {
 export const SPEAKER_PROFILES: { [key: string]: SpeakerProfile } = {
   narrator: {
     name: "none",
-    soundSrc: "/music/snd_txtsus.wav",
+    soundSrc: "/sound/snd_txtsus.wav",
   },
   sans: {
     name: "sans",
-    soundSrc: "/music/snd_txtsans.wav",
+    soundSrc: "/sound/snd_txtsans.wav",
     avatars: {
       sansnormal: "/img/sans/spr_face_sans0_0.png",
       sansrelaxed: "/img/sans/spr_face_sans1_0.png",
@@ -23,7 +23,7 @@ export const SPEAKER_PROFILES: { [key: string]: SpeakerProfile } = {
   },
   ralsei: {
     name: "ralsei",
-    soundSrc: "/music/snd_txtral.wav",
+    soundSrc: "/sound/snd_txtral.wav",
     avatars: {
       ralseismile: "/img/ralsei/spr_face_r_dark_0.png",
       ralseishy: "/img/ralsei/spr_face_r_dark_1.png",
