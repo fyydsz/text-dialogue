@@ -1,0 +1,78 @@
+{
+  "start": [
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseiserious",
+      "text": "* Halo,^3 ini teks pertamamu.^5\\N* Kamu bisa menekan tombol \\CK\"z\"^1 \\CPuntuk melanjutkan!"
+    },
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseismile2",
+      "text": "* Kamu berhasil menekan tombol \\CK\"z\"\\CP.^5 \\CPIni adalah teks kedua.^3 \\CKSelamat!"
+    },
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseishy",
+      "text": "* Dan ini adalah teks terakhir,^5 \\CK...Mungkin?"
+    },
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseiserious",
+      "text": "* Tunggu sebentar...^4\\N* Ada satu hal."
+    },
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseijoy",
+      "text": "* Kamu bisa menggunakan tombol \\CK<ICON:ArrowBigLeft> dan <ICON:ArrowBigRight>^3\\CP\\N* Untuk memilih opsi."
+    },
+    {
+      "type": "choice",
+      "id": "tutorial_choice",
+      "options": [
+        { "text": "Aku mengerti", "goto": "tutorial_1" },
+        { "text": "Tidak mengerti", "goto": "tutorial_2" }
+      ]
+    }
+  ],
+  "tutorial_1": [
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseijoy",
+      "text": "* Hebat!^5 Sepertinya kamu cepat beradaptasi!",
+      "musicAction": "resume"
+    },
+    { "type": "end" }
+  ],
+  "tutorial_2": [
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseiangry",
+      "text": "* Loh.^5 Masih kurang ngerti apa coba?",
+      "musicAction": "pause"
+    },
+    {
+      "type": "choice",
+      "id": "tutorial_2_choice",
+      "options": [
+        { "text": "Aku mengerti", "goto": "tutorial_1" },
+        { "text": "Tidak mengerti", "goto": "tutorial_2-1" }
+      ],
+      "musicAction": "resume"
+    }
+  ],
+  "tutorial_2-1": [
+    {
+      "speaker": "ralsei",
+      "avatar": "ralseiangry",
+      "text": "* Kamu emang sengaja ya^2 bikin aku marah!?!",
+      "musicAction": "pause"
+    },
+    {
+      "type": "choice",
+      "options": [
+        { "text": "Aku mengerti", "goto": "tutorial_1" }
+      ],
+      "musicAction": "resume"
+    }
+  ]
+}
