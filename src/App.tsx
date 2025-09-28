@@ -1,3 +1,4 @@
+// Import komponen dan hooks yang dibutuhkan
 import { useEffect, useRef, useState } from 'react';
 import './App.css'
 import { useIsMobile } from './components/hooks/no-mobile';
@@ -11,36 +12,55 @@ import VolumeBar from './components/hooks/volume-bar';
 import { MusicProvider } from './components/context/MusicContext';
 
 function App() {
+  // Hook untuk mendeteksi apakah perangkat mobile
   const isMobile = useIsMobile();
+  
+  // State untuk mengontrol tampilan teks
   const [showText, setshowText] = useState(false);
+  
+  // State untuk loading screen
   const [isLoading, setIsLoading] = useState(true);
+  
+  // State untuk kontrol volume musik (default 50%)
   const [volume, setVolume] = useState(0.5);
+  
+  // State untuk track musik yang sedang diputar
   const [currentTrack, setCurrentTrack] = useState("");
+  
+  // State untuk index track saat ini dalam queue
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  
+  // State untuk antrian musik yang akan diputar
   const [musicQueue, setMusicQueue] = useState<string[]>([]);
+  
+  // State untuk menampilkan notifikasi track baru
   const [showNewTrackNotif, setShowNewTrackNotif] = useState(false);
+  
+  // State untuk mengetahui apakah musik sedang di-pause
   const [isMusicPaused, setIsMusicPaused] = useState(false);
 
+  // Referensi untuk elemen audio HTML
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Functions to control music playback
+  // Fungsi untuk menjeda musik (untuk efek komedi)
   const pauseMusic = () => {
     if (audioRef.current && !audioRef.current.paused) {
       audioRef.current.pause();
       setIsMusicPaused(true);
-      console.log("Music paused for comedic effect");
+      console.log("Musik dijeda untuk efek komedi");
     }
   };
 
+  // Fungsi untuk melanjutkan musik yang dijeda
   const resumeMusic = () => {
     if (audioRef.current && audioRef.current.paused && isMusicPaused) {
       audioRef.current.play().catch(console.error);
       setIsMusicPaused(false);
-      console.log("Music resumed");
+      console.log("Musik dilanjutkan");
     }
   };
 
-  // Music files available for random selection
+  // Daftar file musik yang tersedia untuk diputar secara acak
   const musicTracks = [
     "field_of_hopes_and_dreams.mp3",
     "rude_buster.mp3",
@@ -48,7 +68,7 @@ function App() {
     "the_third_sanctuary.mp3",
   ];
 
-  // Function to shuffle array
+  // Fungsi untuk mengacak urutan array menggunakan algoritma Fisher-Yates
   const shuffleArray = (array: string[]) => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -58,19 +78,19 @@ function App() {
     return shuffled;
   };
 
-  // Function to create shuffled music queue
+  // Fungsi untuk membuat antrian musik yang sudah diacak
   const createMusicQueue = () => {
     return shuffleArray(musicTracks);
   };
 
-  // Function to get next track in queue
+  // Fungsi untuk mendapatkan track selanjutnya dalam antrian
   const getNextTrack = (): { track: string; index: number } | null => {
     if (musicQueue.length === 0) return null;
     const nextIndex = (currentTrackIndex + 1) % musicQueue.length;
     return { track: musicQueue[nextIndex], index: nextIndex };
   };
 
-  // Function to get track display name
+  // Fungsi untuk mendapatkan nama tampilan track yang lebih user-friendly
   const getTrackDisplayName = (filename: string) => {
     const trackNames: { [key: string]: string } = {
       "dogsong.mp3": "Toby Fox - Dogsong",
@@ -83,28 +103,33 @@ function App() {
   };
 
   useEffect(() => {
-    // Initialize music queue and set first track on component mount
+    // Inisialisasi antrian musik dan set track pertama saat komponen dimount
     if (!isMobile) {
       const queue = createMusicQueue();
       setMusicQueue(queue);
       setCurrentTrack(queue[0]);
       setCurrentTrackIndex(0);
     } else {
+      // Untuk mobile, set track default
       setCurrentTrack("dogsong.mp3");
     }
   }, [isMobile]);
 
   useEffect(() => {
+    // Fungsi untuk preload semua aset (audio, font, gambar) sebelum aplikasi dimulai
     const preloadAssets = async () => {
       const audio = audioRef.current;
       const font = "35px DeterminationMonoRegular"; 
       
+      // Mengambil semua URL gambar dari profil pembicara
       const imageUrls = Object.values(SPEAKER_PROFILES).flatMap(
         profile => profile.avatars ? Object.values(profile.avatars) : []
       );
       
+      // Menghilangkan duplikasi URL gambar
       const uniqueImageUrls = [...new Set(imageUrls)];
 
+      // Promise untuk memuat audio
       const audioPromise = new Promise<void>((resolve, reject) => {
         if (!audio) return resolve();
         if (audio.readyState >= 4) return resolve();
@@ -112,8 +137,10 @@ function App() {
         audio.addEventListener('error', (e) => reject(new Error(`Gagal memuat audio: ${e}`)), { once: true });
       });
 
+      // Promise untuk memuat font
       const fontPromise = document.fonts.load(font);
 
+      // Promise untuk memuat semua gambar
       const imagePromises = uniqueImageUrls.map(src => {
         return new Promise<void>((resolve, reject) => {
           const img = new Image();
@@ -123,6 +150,7 @@ function App() {
         });
       });
 
+      // Menunggu semua aset selesai dimuat
       return Promise.all([audioPromise, fontPromise, ...imagePromises]);
     };
 
@@ -140,13 +168,14 @@ function App() {
 
 
 
+  // Effect untuk mengupdate volume audio ketika state volume berubah
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
 
-  // Set volume when currentTrack changes or audio is ready
+  // Effect untuk mengatur volume ketika track berubah atau audio siap diputar
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && currentTrack) {
@@ -154,11 +183,11 @@ function App() {
         audio.volume = volume;
       };
 
-      // Set volume immediately if audio is already loaded
+      // Set volume langsung jika audio sudah dimuat
       if (audio.readyState >= 1) {
         audio.volume = volume;
       } else {
-        // Wait for audio to be ready
+        // Tunggu sampai audio siap untuk diputar
         audio.addEventListener('loadedmetadata', setVolumeWhenReady, { once: true });
       }
 
@@ -168,21 +197,21 @@ function App() {
     }
   }, [currentTrack, volume]);
 
-  // Handle track ended event to play next song
+  // Effect untuk menangani event ketika track selesai diputar dan memutar lagu berikutnya
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && !isMobile && musicQueue.length > 0) {
       const handleTrackEnded = () => {
-        console.log("Track ended, getting next track...");
+        console.log("Track selesai, mendapatkan track berikutnya...");
         const nextTrack = getNextTrack();
-        console.log("Next track:", nextTrack);
+        console.log("Track berikutnya:", nextTrack);
         if (nextTrack) {
-          console.log("Setting next track:", nextTrack.track);
+          console.log("Mengatur track berikutnya:", nextTrack.track);
           setCurrentTrack(nextTrack.track);
           setCurrentTrackIndex(nextTrack.index);
           setShowNewTrackNotif(true);
           
-          // Hide notification after 5 seconds
+          // Sembunyikan notifikasi setelah 5 detik
           setTimeout(() => {
             setShowNewTrackNotif(false);
           }, 5000);
@@ -197,20 +226,20 @@ function App() {
     }
   }, [musicQueue, currentTrackIndex, isMobile]);
 
-  // Auto play when track changes (except for initial load)
+  // Effect untuk otomatis memutar musik ketika track berubah (kecuali saat pertama kali loading)
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && currentTrack && showText) {
       const playAudio = async () => {
         try {
-          console.log("Playing track:", currentTrack);
+          console.log("Memutar track:", currentTrack);
           await audio.play();
         } catch (error) {
-          console.error("Failed to play next track:", error);
+          console.error("Gagal memutar track berikutnya:", error);
         }
       };
 
-      // Small delay to ensure audio src is updated
+      // Delay kecil untuk memastikan src audio sudah terupdate
       const playTimer = setTimeout(() => {
         playAudio();
       }, 100);
@@ -221,19 +250,21 @@ function App() {
     }
   }, [currentTrack, showText]);
 
-  // Set up Media Session API for browser media controls
+  // Effect untuk mengatur Media Session API untuk kontrol musik dari browser/sistem operasi
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack && !isMobile) {
+      // Mengatur metadata untuk ditampilkan di kontrol media browser
       navigator.mediaSession.metadata = new MediaMetadata({
         title: getTrackDisplayName(currentTrack),
         artist: "Toby Fox",
         album: "Undertale/Deltarune OST",
       });
 
-      // Use throttling to prevent rapid music skipping from interfering with dialogue
+      // Menggunakan throttling untuk mencegah skip musik yang terlalu cepat mengganggu dialog
       let nextTrackCooldown = false;
       let prevTrackCooldown = false;
 
+      // Handler untuk tombol next track
       navigator.mediaSession.setActionHandler('nexttrack', () => {
         if (nextTrackCooldown) return;
         nextTrackCooldown = true;
@@ -246,12 +277,13 @@ function App() {
           setTimeout(() => setShowNewTrackNotif(false), 5000);
         }
         
-        // Cooldown to prevent rapid skipping
+        // Cooldown untuk mencegah skip yang terlalu cepat
         setTimeout(() => {
           nextTrackCooldown = false;
         }, 1000);
       });
 
+      // Handler untuk tombol previous track
       navigator.mediaSession.setActionHandler('previoustrack', () => {
         if (prevTrackCooldown) return;
         prevTrackCooldown = true;
@@ -267,7 +299,7 @@ function App() {
           setTimeout(() => setShowNewTrackNotif(false), 5000);
         }
         
-        // Cooldown to prevent rapid skipping
+        // Cooldown untuk mencegah skip yang terlalu cepat
         setTimeout(() => {
           prevTrackCooldown = false;
         }, 1000);
@@ -275,10 +307,12 @@ function App() {
     }
   }, [currentTrack, currentTrackIndex, musicQueue, isMobile]);
 
+  // Fungsi untuk menangani perubahan volume dari komponen VolumeBar
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
   };
 
+  // Render komponen utama
   return (
     <div className={cn(
       "App",
